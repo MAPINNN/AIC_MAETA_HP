@@ -3,211 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>まぴんの自己紹介ページ</title>
+    <title>筋肉成長記録</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-    <div class="curtain" id="curtain-left"></div>
-    <div class="curtain" id="curtain-right"></div>
+    <header>
+        <h1 id="main-title">筋肉成長記録</h1>
+    </header>
 
-    <div class="container">
-        <h1 id="typing-title">まぴんの自己紹介</h1>
-
-        <div class="section">
-            <h2>基本情報</h2>
-            <p>
-                <strong>名前:</strong> まぴん<br>
-                <strong>所属:</strong> 学生 (デザイン工学専攻)
-            </p>
+    <div id="user-auth-section" class="container">
+        <h2>ログインまたは新規登録</h2>
+        <div class="form-group">
+            <label for="username-input">ユーザー名:</label>
+            <input type="text" id="username-input" placeholder="例: muscle_taro">
         </div>
-
-        <div class="section">
-            <h2>趣味・関心事</h2>
-            <p>サブカルチャー全般と筋力トレーニングに情熱を注いでいます。</p>
+        
+        <div class="button-group">
+            <button id="login-button">決定</button>
+            
         </div>
-
-        <div class="section">
-            <h2>トレーニング記録</h2>
-            <p>日々のウエイトトレーニングの成果です。肉体の変化やRM(Repetition Maximum)の推移を記録していきます。</p>
-            <!-- ここに具体的な記録（画像や表など）を今後追加していく予定です -->
-            <p><strong>今後の更新をお楽しみに！</strong></p>
-        </div>
-
-        <div class="motto">
-            <p>為せば成る</p>
-        </div>
+        <p id="auth-error" class="error-message"></p>
     </div>
 
+    <main id="main-content" class="muscle-container" style="display: none;">
+        <!-- Log Entry Form -->
+        <section id="data-entry">
+            <h2>今日の記録を追加</h2>
+            <form id="workout-form">
+                <div class="form-group"><label for="workout-date">日付:</label><input type="date" id="workout-date" required></div>
+                <div class="form-group"><label for="workout-type">種目:</label><input type="text" id="workout-type" placeholder="例: ベンチプレス" required></div>
+                <div class="form-group"><label for="weight">重量 (kg):</label><input type="number" id="weight" placeholder="例: 60" step="0.1" required></div>
+                <div class="form-group"><label for="reps">回数:</label><input type="number" id="reps" placeholder="例: 10" required></div>
+                <div class="form-group"><label for="notes">メモ:</label><textarea id="notes" placeholder="今日の感想や食事内容など"></textarea></div>
+                <div class="form-group"><label for="photo">今日の写真:</label><input type="file" id="photo" accept="image/*"></div>
+                <button type="submit">記録する</button>
+            </form>
+        </section>
+
+        <!-- Personal Log View -->
+        <section id="log-view">
+            <h2>あなたのトレーニングログ</h2>
+            <div id="log-list"></div>
+        </section>
+
+        <!-- Personal Gallery View -->
+        <section id="gallery-view">
+            <h2>あなたのフォトギャラリー</h2>
+            <div id="photo-gallery"></div>
+        </section>
+
+        <!-- Personal Chart View -->
+        <section id="chart-view">
+            <h2>あなたの成長グラフ</h2>
+            <div class="form-group"><label for="chart-exercise-select">種目を選択:</label><select id="chart-exercise-select"></select></div>
+            <canvas id="progress-chart"></canvas>
+        </section>
+    </main>
+
+    <!-- Other Users' Logs -->
+    <section id="other-users-section" class="container" style="display: none;">
+        <h2>他のユーザーの記録を見る</h2>
+        <div class="form-group">
+            <label for="other-user-select">ユーザーを選択:</label>
+            <select id="other-user-select"></select>
+        </div>
+        <div id="other-user-logs"></div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Curtain opener script
-            window.addEventListener('scroll', () => {
-                document.getElementById('curtain-left').classList.add('opened');
-                document.getElementById('curtain-right').classList.add('opened');
-            }, { once: true });
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Global State & Config ---
+        let currentUser = null;
+        const API_URL = 'http://127.0.0.1:8001';
 
-            // Typing animation script
-            const target = document.getElementById('typing-title');
-            const text = target.innerHTML;
-            const speed = 150; // Milliseconds per character
-            const cursor = '<span class="typing-cursor">|</span>';
-            target.innerHTML = '';
-            let i = 0;
+        // --- DOM Elements ---
+        const authSection = document.getElementById('user-auth-section');
+        const mainContent = document.getElementById('main-content');
+        const otherUsersSection = document.getElementById('other-users-section');
+        
+        const usernameInput = document.getElementById('username-input');
+        const loginButton = document.getElementById('login-button');
+        const authError = document.getElementById('auth-error');
 
-            function typeWriter() {
-                if (i < text.length) {
-                    target.innerHTML = text.substring(0, i + 1) + cursor;
-                    i++;
-                    setTimeout(typeWriter, speed);
-                } else {
-                    // Keep cursor blinking at the end
-                    target.innerHTML = text + cursor;
-                }
+        const mainTitle = document.getElementById('main-title');
+        const form = document.getElementById('workout-form');
+        const logList = document.getElementById('log-list');
+        const photoGallery = document.getElementById('photo-gallery');
+        const photoInput = document.getElementById('photo');
+        const chartCanvas = document.getElementById('progress-chart');
+        const exerciseSelect = document.getElementById('chart-exercise-select');
+        const otherUserSelect = document.getElementById('other-user-select');
+        const otherUserLogs = document.getElementById('other-user-logs');
+
+        let progressChart = null;
+
+        // --- API Communication ---
+        const apiCall = async (endpoint, method = 'GET', body = null) => {
+            const options = {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+            };
+            if (body) options.body = JSON.stringify(body);
+
+            const response = await fetch(`${API_URL}${endpoint}`, options);
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || 'API Error');
             }
+            return data;
+        };
 
-            // Delay typing until after curtain animation has a chance to be seen
-            setTimeout(typeWriter, 1200);
-        });
-    </script>
+        // --- Rendering Functions ---
+        const renderLogs = async (username, container) => {
+            const logs = (await apiCall(`/logs/${username}`)).sort((a, b) => new Date(b.date) - new Date(a.date));
+            container.innerHTML = logs.length ? '' : '<p>まだ記録がありません。</p>';
+            logs.forEach(log => {
+                const logItem = document.createElement('div');
+                logItem.className = 'log-item';
+                logItem.innerHTML = `<strong>${log.date}</strong><br><span>種目: ${log.type}</span><br><span>重量: ${log.weight} kg</span><br><span>回数: ${log.reps} 回</span><br><p>${log.notes || ''}</p>`;
+                container.appendChild(logItem);
+            });
+        };
 
-    <div class="section">
-        <h2>Flappy Bird</h2>
-        <canvas id="flappyBirdCanvas" width="400" height="400" style="background-color: #87CEEB;"></canvas>
-    </div>
+        const renderPersonalGallery = async () => {
+            const logs = await apiCall(`/logs/${currentUser}`);
+            const photos = logs.filter(log => log.photo).sort((a, b) => new Date(b.date) - new Date(a.date));
+            photoGallery.innerHTML = photos.length ? '' : '<p>まだ写真がありません。</p>';
+            photos.forEach(log => {
+                const galleryItem = document.createElement('div');
+                galleryItem.className = 'gallery-item';
+                galleryItem.innerHTML = `<img src="${log.photo}" alt="${log.date}の写真"><p>${log.date}</p>`;
+                photoGallery.appendChild(galleryItem);
+            });
+        };
 
-    <script>
-        const canvas = document.getElementById('flappyBirdCanvas');
-        const ctx = canvas.getContext('2d');
+        const populateExerciseSelect = async () => {
+            const logs = await apiCall(`/logs/${currentUser}`);
+            const uniqueExercises = [...new Set(logs.map(log => log.type))];
+            exerciseSelect.innerHTML = '<option value="">-- 種目を選択 --</option>';
+            uniqueExercises.forEach(exercise => {
+                const option = document.createElement('option');
+                option.value = exercise;
+                option.textContent = exercise;
+                exerciseSelect.appendChild(option);
+            });
+        };
 
-        // Game variables
-        let birdX = 50;
-        let birdY = 150;
-        let birdYSpeed = 0;
-        const gravity = 0.3;
-        const jumpStrength = -7;
-        const birdSize = 40;
-
-        let pipes = [];
-        let score = 0;
-        let frame = 0;
-        let gameStarted = false;
-
-        // Bird image
-        const birdImage = new Image();
-        birdImage.src = 'images/IMG_0818.jpg';
-
-        // Pipe properties
-        const pipeWidth = 50;
-        const pipeGap = 120;
-        const pipeDistance = 200;
-
-        function drawBird() {
-            ctx.drawImage(birdImage, birdX - birdSize / 2, birdY - birdSize / 2, birdSize, birdSize);
-        }
-
-        function drawPipes() {
-            ctx.fillStyle = 'green';
-            for (let i = 0; i < pipes.length; i++) {
-                const p = pipes[i];
-                ctx.fillRect(p.x, 0, pipeWidth, p.top);
-                ctx.fillRect(p.x, p.top + pipeGap, pipeWidth, canvas.height - p.top - pipeGap);
+        const renderChart = async () => {
+            const logs = await apiCall(`/logs/${currentUser}`);
+            const selectedExercise = exerciseSelect.value;
+            if (!selectedExercise) {
+                if(progressChart) progressChart.destroy();
+                chartCanvas.style.display = 'none';
+                return;
             }
-        }
+            chartCanvas.style.display = 'block';
+            const chartData = logs.filter(log => log.type === selectedExercise).sort((a, b) => new Date(a.date) - new Date(b.date));
+            if (progressChart) progressChart.destroy();
+            progressChart = new Chart(chartCanvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: chartData.map(log => log.date),
+                    datasets: [{
+                        label: `${selectedExercise} の重量 (kg)`,
+                        data: chartData.map(log => log.weight),
+                        borderColor: '#39ff14', fill: true,
+                    }]
+                },
+            });
+        };
 
-        function update() {
-            if (!gameStarted) return;
+        const populateOtherUsers = async () => {
+            const users = await apiCall('/users');
+            otherUserSelect.innerHTML = '<option value="">-- ユーザーを選択 --</option>';
+            users.filter(user => user !== currentUser).forEach(user => {
+                const option = document.createElement('option');
+                option.value = user;
+                option.textContent = user;
+                otherUserSelect.appendChild(option);
+            });
+        };
 
-            // Bird physics
-            birdYSpeed += gravity;
-            birdY += birdYSpeed;
+        const renderAllPersonal = async () => {
+            await renderLogs(currentUser, logList);
+            await renderPersonalGallery();
+            await populateExerciseSelect();
+            await renderChart();
+        };
 
-            // Pipe generation
-            if (frame % pipeDistance === 0) {
-                const topPipeHeight = Math.random() * (canvas.height - pipeGap - 100) + 50;
-                pipes.push({ x: canvas.width, top: topPipeHeight });
+        // --- Event Listeners ---
+        loginButton.addEventListener('click', async () => {
+            const username = usernameInput.value.trim();
+            if (!username) {
+                authError.textContent = 'ユーザー名を入力してください。';
+                return;
             }
-
-            // Move pipes
-            for (let i = pipes.length - 1; i >= 0; i--) {
-                pipes[i].x -= 2;
-
-                // Collision detection
-                if (
-                    birdX + birdSize / 2 > pipes[i].x && birdX - birdSize / 2 < pipes[i].x + pipeWidth &&
-                    (birdY - birdSize / 2 < pipes[i].top || birdY + birdSize / 2 > pipes[i].top + pipeGap)
-                ) {
-                    resetGame();
-                }
-
-                // Score
-                if (pipes[i].x + pipeWidth < birdX && !pipes[i].scored) {
-                    score++;
-                    pipes[i].scored = true;
-                }
-
-                // Remove off-screen pipes
-                if (pipes[i].x + pipeWidth < 0) {
-                    pipes.splice(i, 1);
-                }
-            }
-
-            // Ground collision
-            if (birdY + birdSize / 2 > canvas.height) {
-                resetGame();
-            }
-             // Sky collision
-            if (birdY - birdSize / 2 < 0) {
-                resetGame();
-            }
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawBird();
-            drawPipes();
-
-            ctx.fillStyle = 'black';
-            ctx.font = '24px sans-serif';
-            ctx.fillText('Score: ' + score, 10, 30);
-
-            if (!gameStarted) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = 'white';
-                ctx.font = '30px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('Press Space to Start', canvas.width / 2, canvas.height / 2);
-                ctx.textAlign = 'left';
-            }
-        }
-
-        function gameLoop() {
-            update();
-            draw();
-            frame++;
-            requestAnimationFrame(gameLoop);
-        }
-
-        function resetGame() {
-            birdY = 150;
-            birdYSpeed = 0;
-            pipes = [];
-            score = 0;
-            frame = 0;
-            gameStarted = false;
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                if (!gameStarted) {
-                    gameStarted = true;
-                }
-                birdYSpeed = jumpStrength;
-            }
+            currentUser = username;
+            authSection.style.display = 'none';
+            mainContent.style.display = 'block';
+            otherUsersSection.style.display = 'block';
+            mainTitle.textContent = `${currentUser}の筋肉成長記録`;
+            await renderAllPersonal();
+            await populateOtherUsers();
         });
 
-        gameLoop();
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newLog = {
+                date: document.getElementById('workout-date').value,
+                type: document.getElementById('workout-type').value.trim(),
+                weight: parseFloat(document.getElementById('weight').value),
+                reps: parseInt(document.getElementById('reps').value),
+                notes: document.getElementById('notes').value,
+                photo: null
+            };
+            if (!newLog.date || !newLog.type) return alert('日付と種目は必須です。');
+
+            const file = photoInput.files[0];
+            const processSubmit = async (log) => {
+                await apiCall(`/logs/${currentUser}`, 'POST', log);
+                await renderAllPersonal();
+                form.reset();
+            };
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    newLog.photo = event.target.result;
+                    await processSubmit(newLog);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                await processSubmit(newLog);
+            }
+        });
+
+        exerciseSelect.addEventListener('change', renderChart);
+        
+        otherUserSelect.addEventListener('change', async (e) => {
+            const selectedUser = e.target.value;
+            if (selectedUser) {
+                await renderLogs(selectedUser, otherUserLogs);
+            } else {
+                otherUserLogs.innerHTML = '';
+            }
+        });
+    });
     </script>
 </body>
 </html>
