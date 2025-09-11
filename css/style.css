@@ -1,0 +1,183 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+body {
+    font-family: 'Press Start 2P', cursive;
+    line-height: 1.8;
+    margin: 0;
+    background-color: #000000;
+    color: #ffffff;
+    /* SCANLINES EFFECT */
+    background-image: linear-gradient(rgba(0, 255, 0, 0.15) 50%, transparent 50%);
+    background-size: 100% 4px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 40px auto;
+    background: #1a1a1a;
+    padding: 20px;
+    border: 4px solid #39ff14; /* Neon Green */
+    box-shadow: 6px 6px 0px #39ff14;
+    border-radius: 0;
+    image-rendering: pixelated; /* Keep images sharp */
+}
+
+h1, h2 {
+    color: #ffff00; /* Yellow */
+    border-bottom: 4px solid #39ff14; /* Neon Green */
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    text-shadow: 3px 3px 0px #ff00ff; /* Magenta Shadow */
+}
+
+h1 {
+    text-align: center;
+    font-size: 2em;
+}
+
+h2 {
+    font-size: 1.5em;
+}
+
+.section {
+    margin-bottom: 25px;
+    padding: 0;
+    background-color: transparent;
+    border: none;
+}
+
+.section strong {
+    color: #00bfff; /* Deep Sky Blue */
+    font-weight: normal;
+}
+
+.motto {
+    font-style: normal;
+    text-align: center;
+    font-size: 1.1em;
+    margin-top: 40px;
+    padding: 20px;
+    background-color: #222;
+    border: 4px dashed #ff00ff; /* Magenta */
+    color: #ffffff;
+}
+
+/* Blinking effect for the motto */
+@keyframes blink {
+    50% { opacity: 0.5; }
+}
+
+.motto p {
+    animation: blink 1.5s step-start infinite;
+}
+
+/* Curtain Animation */
+.curtain {
+    position: fixed;
+    top: 0;
+    width: 50vw;
+    height: 100vh;
+    background: #000;
+    z-index: 100;
+    transition: transform 1s ease-in-out;
+}
+
+#curtain-left {
+    left: 0;
+}
+
+#curtain-right {
+    right: 0;
+}
+
+/* "Opened" state */
+#curtain-left.opened {
+    transform: translateX(-100%);
+}
+
+#curtain-right.opened {
+    transform: translateX(100%);
+}
+
+/* Typing cursor */
+.typing-cursor {
+    color: #39ff14; /* Neon Green */
+    animation: blink-cursor 0.8s infinite;
+}
+
+@keyframes blink-cursor {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+#flappyBirdCanvas {
+    border: 4px solid #39ff14;
+    display: block;
+    margin: 0 auto;
+}
+
+/* Muscle Growth Page Styles */
+.muscle-container {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    padding: 20px;
+    max-width: 900px;
+    margin: 40px auto;
+}
+
+#data-entry, #log-view, #gallery-view, #chart-view {
+    background: #1a1a1a;
+    padding: 20px;
+    border: 4px solid #00bfff; /* Deep Sky Blue */
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #ffff00; /* Yellow */
+}
+
+.form-group input,
+.form-group textarea,
+.form-group button {
+    width: 100%;
+    padding: 10px;
+    background: #333;
+    border: 2px solid #39ff14;
+    color: #ffffff;
+    font-family: 'Press Start 2P', cursive;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: 2px solid #ffff00;
+}
+
+button[type="submit"] {
+    background: #39ff14;
+    color: #000000;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+#log-list, #photo-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.log-item, .gallery-item {
+    border: 2px solid #ff00ff;
+    padding: 15px;
+    background: #222;
+}
+
+.gallery-item img {
+    max-width: 100%;
+    image-rendering: pixelated;
+}

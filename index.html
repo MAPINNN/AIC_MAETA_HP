@@ -4,41 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>まぴんの自己紹介ページ</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            line-height: 1.6;
-            margin: 20px;
-            background-color: #f4f4f4;
-            color: #333;
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        h1, h2 {
-            color: #333;
-            border-bottom: 2px solid #eaeaea;
-            padding-bottom: 10px;
-        }
-        .section {
-            margin-bottom: 20px;
-        }
-        .motto {
-            font-style: italic;
-            text-align: center;
-            font-size: 1.2em;
-            margin-top: 30px;
-        }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+
+    <div class="curtain" id="curtain-left"></div>
+    <div class="curtain" id="curtain-right"></div>
+
     <div class="container">
-        <h1>まぴんの自己紹介</h1>
+        <h1 id="typing-title">まぴんの自己紹介</h1>
 
         <div class="section">
             <h2>基本情報</h2>
@@ -64,5 +38,176 @@
             <p>為せば成る</p>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Curtain opener script
+            window.addEventListener('scroll', () => {
+                document.getElementById('curtain-left').classList.add('opened');
+                document.getElementById('curtain-right').classList.add('opened');
+            }, { once: true });
+
+            // Typing animation script
+            const target = document.getElementById('typing-title');
+            const text = target.innerHTML;
+            const speed = 150; // Milliseconds per character
+            const cursor = '<span class="typing-cursor">|</span>';
+            target.innerHTML = '';
+            let i = 0;
+
+            function typeWriter() {
+                if (i < text.length) {
+                    target.innerHTML = text.substring(0, i + 1) + cursor;
+                    i++;
+                    setTimeout(typeWriter, speed);
+                } else {
+                    // Keep cursor blinking at the end
+                    target.innerHTML = text + cursor;
+                }
+            }
+
+            // Delay typing until after curtain animation has a chance to be seen
+            setTimeout(typeWriter, 1200);
+        });
+    </script>
+
+    <div class="section">
+        <h2>Flappy Bird</h2>
+        <canvas id="flappyBirdCanvas" width="400" height="400" style="background-color: #87CEEB;"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('flappyBirdCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game variables
+        let birdX = 50;
+        let birdY = 150;
+        let birdYSpeed = 0;
+        const gravity = 0.3;
+        const jumpStrength = -7;
+        const birdSize = 40;
+
+        let pipes = [];
+        let score = 0;
+        let frame = 0;
+        let gameStarted = false;
+
+        // Bird image
+        const birdImage = new Image();
+        birdImage.src = 'images/IMG_0818.jpg';
+
+        // Pipe properties
+        const pipeWidth = 50;
+        const pipeGap = 120;
+        const pipeDistance = 200;
+
+        function drawBird() {
+            ctx.drawImage(birdImage, birdX - birdSize / 2, birdY - birdSize / 2, birdSize, birdSize);
+        }
+
+        function drawPipes() {
+            ctx.fillStyle = 'green';
+            for (let i = 0; i < pipes.length; i++) {
+                const p = pipes[i];
+                ctx.fillRect(p.x, 0, pipeWidth, p.top);
+                ctx.fillRect(p.x, p.top + pipeGap, pipeWidth, canvas.height - p.top - pipeGap);
+            }
+        }
+
+        function update() {
+            if (!gameStarted) return;
+
+            // Bird physics
+            birdYSpeed += gravity;
+            birdY += birdYSpeed;
+
+            // Pipe generation
+            if (frame % pipeDistance === 0) {
+                const topPipeHeight = Math.random() * (canvas.height - pipeGap - 100) + 50;
+                pipes.push({ x: canvas.width, top: topPipeHeight });
+            }
+
+            // Move pipes
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                pipes[i].x -= 2;
+
+                // Collision detection
+                if (
+                    birdX + birdSize / 2 > pipes[i].x && birdX - birdSize / 2 < pipes[i].x + pipeWidth &&
+                    (birdY - birdSize / 2 < pipes[i].top || birdY + birdSize / 2 > pipes[i].top + pipeGap)
+                ) {
+                    resetGame();
+                }
+
+                // Score
+                if (pipes[i].x + pipeWidth < birdX && !pipes[i].scored) {
+                    score++;
+                    pipes[i].scored = true;
+                }
+
+                // Remove off-screen pipes
+                if (pipes[i].x + pipeWidth < 0) {
+                    pipes.splice(i, 1);
+                }
+            }
+
+            // Ground collision
+            if (birdY + birdSize / 2 > canvas.height) {
+                resetGame();
+            }
+             // Sky collision
+            if (birdY - birdSize / 2 < 0) {
+                resetGame();
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBird();
+            drawPipes();
+
+            ctx.fillStyle = 'black';
+            ctx.font = '24px sans-serif';
+            ctx.fillText('Score: ' + score, 10, 30);
+
+            if (!gameStarted) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Press Space to Start', canvas.width / 2, canvas.height / 2);
+                ctx.textAlign = 'left';
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            frame++;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame() {
+            birdY = 150;
+            birdYSpeed = 0;
+            pipes = [];
+            score = 0;
+            frame = 0;
+            gameStarted = false;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                if (!gameStarted) {
+                    gameStarted = true;
+                }
+                birdYSpeed = jumpStrength;
+            }
+        });
+
+        gameLoop();
+    </script>
 </body>
 </html>

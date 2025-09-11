@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>筋肉成長記録</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>筋肉成長記録</h1>
+    </header>
+
+    <main class="muscle-container">
+        <section id="data-entry">
+            <h2>今日の記録を追加</h2>
+            <form id="workout-form">
+                <div class="form-group">
+                    <label for="workout-date">日付:</label>
+                    <input type="date" id="workout-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="workout-type">種目:</label>
+                    <input type="text" id="workout-type" placeholder="例: ベンチプレス" required>
+                </div>
+                <div class="form-group">
+                    <label for="weight">重量 (kg):</label>
+                    <input type="number" id="weight" placeholder="例: 60" required>
+                </div>
+                <div class="form-group">
+                    <label for="reps">回数:</label>
+                    <input type="number" id="reps" placeholder="例: 10" required>
+                </div>
+                <div class="form-group">
+                    <label for="notes">メモ:</label>
+                    <textarea id="notes" placeholder="今日の感想や食事内容など"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="photo">今日の写真:</label>
+                    <input type="file" id="photo" accept="image/*">
+                </div>
+                <button type="submit">記録する</button>
+            </form>
+        </section>
+
+        <section id="log-view">
+            <h2>トレーニングログ</h2>
+            <div id="log-list">
+                <!-- ここに記録が表示されます -->
+            </div>
+        </section>
+
+        <section id="gallery-view">
+            <h2>フォトギャラリー</h2>
+            <div id="photo-gallery">
+                <!-- ここに写真が表示されます -->
+            </div>
+        </section>
+
+        <section id="chart-view">
+            <h2>成長グラフ</h2>
+            <div class="form-group">
+                <label for="chart-exercise-select">種目を選択:</label>
+                <select id="chart-exercise-select"></select>
+            </div>
+            <canvas id="progress-chart"></canvas>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                // DOM Elements
+                const form = document.getElementById('workout-form');
+                const logList = document.getElementById('log-list');
+                const photoGallery = document.getElementById('photo-gallery');
+                const photoInput = document.getElementById('photo');
+                const chartCanvas = document.getElementById('progress-chart');
+                const exerciseSelect = document.getElementById('chart-exercise-select');
+
+                let progressChart = null; // To hold the chart instance
+
+                // --- Data Management ---
+                const getLogs = () => JSON.parse(localStorage.getItem('workoutLogs')) || [];
+                const saveLogs = (logs) => localStorage.setItem('workoutLogs', JSON.stringify(logs));
+
+                // --- Rendering Functions ---
+
+                // Render Workout Log
+                const renderLogs = () => {
+                    const logs = getLogs().sort((a, b) => new Date(b.date) - new Date(a.date));
+                    logList.innerHTML = '';
+                    logs.forEach(log => {
+                        const logItem = document.createElement('div');
+                        logItem.className = 'log-item';
+                        logItem.innerHTML = `
+                            <strong>${log.date}</strong><br>
+                            <span>種目: ${log.type}</span><br>
+                            <span>重量: ${log.weight} kg</span><br>
+                            <span>回数: ${log.reps} 回</span><br>
+                            <p>${log.notes || ''}</p>
+                        `;
+                        logList.appendChild(logItem);
+                    });
+                };
+
+                // Render Photo Gallery
+                const renderGallery = () => {
+                    const logs = getLogs();
+                    photoGallery.innerHTML = '';
+                    const photos = logs.filter(log => log.photo).sort((a, b) => new Date(b.date) - new Date(a.date));
+                    photos.forEach(log => {
+                        const galleryItem = document.createElement('div');
+                        galleryItem.className = 'gallery-item';
+                        galleryItem.innerHTML = `
+                            <img src="${log.photo}" alt="${log.date}の写真">
+                            <p>${log.date}</p>
+                        `;
+                        photoGallery.appendChild(galleryItem);
+                    });
+                };
+
+                // Render Progress Chart
+                const renderChart = () => {
+                    const logs = getLogs();
+                    const selectedExercise = exerciseSelect.value;
+
+                    if (!selectedExercise) {
+                        chartCanvas.style.display = 'none';
+                        return;
+                    }
+                    chartCanvas.style.display = 'block';
+
+                    const chartData = logs
+                        .filter(log => log.type === selectedExercise)
+                        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    const labels = chartData.map(log => log.date);
+                    const data = chartData.map(log => log.weight);
+
+                    if (progressChart) {
+                        progressChart.destroy(); // Destroy old chart before creating a new one
+                    }
+
+                    progressChart = new Chart(chartCanvas.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: `${selectedExercise} の重量 (kg)`,
+                                data: data,
+                                borderColor: '#39ff14',
+                                backgroundColor: 'rgba(57, 255, 20, 0.1)',
+                                tension: 0.1,
+                                fill: true,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { labels: { color: '#ffffff' } },
+                            },
+                            scales: {
+                                x: { ticks: { color: '#ffffff' }, grid: { color: 'rgba(255,255,255,0.2)' } },
+                                y: { ticks: { color: '#ffffff' }, grid: { color: 'rgba(255,255,255,0.2)' } }
+                            }
+                        }
+                    });
+                };
+
+                // Populate the exercise dropdown
+                const populateExerciseSelect = () => {
+                    const logs = getLogs();
+                    const uniqueExercises = [...new Set(logs.map(log => log.type))];
+                    const currentSelection = exerciseSelect.value;
+                    exerciseSelect.innerHTML = '<option value="">-- 種目を選択 --</option>';
+                    uniqueExercises.forEach(exercise => {
+                        const option = document.createElement('option');
+                        option.value = exercise;
+                        option.textContent = exercise;
+                        exerciseSelect.appendChild(option);
+                    });
+                    exerciseSelect.value = currentSelection; // Preserve selection
+                };
+
+                // --- Event Listeners ---
+
+                // Form submission
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const newLog = {
+                        date: document.getElementById('workout-date').value,
+                        type: document.getElementById('workout-type').value.trim(),
+                        weight: document.getElementById('weight').value,
+                        reps: document.getElementById('reps').value,
+                        notes: document.getElementById('notes').value,
+                        photo: null
+                    };
+
+                    if (!newLog.date || !newLog.type || !newLog.weight || !newLog.reps) {
+                        alert('日付、種目、重量、回数は必須です。');
+                        return;
+                    }
+
+                    const file = photoInput.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            newLog.photo = event.target.result;
+                            saveNewLog(newLog);
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        saveNewLog(newLog);
+                    }
+                });
+
+                // Chart exercise selection change
+                exerciseSelect.addEventListener('change', renderChart);
+
+                // --- Helper & Initializer Functions ---
+
+                const saveNewLog = (log) => {
+                    const logs = getLogs();
+                    logs.push(log);
+                    saveLogs(logs);
+                    renderAll();
+                    form.reset();
+                };
+
+                const renderAll = () => {
+                    renderLogs();
+                    renderGallery();
+                    populateExerciseSelect();
+                    renderChart();
+                }
+
+                // Initial Page Load
+                renderAll();
+            });
+        </script>
+
+</body>
+</html>

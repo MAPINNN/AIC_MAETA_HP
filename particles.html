@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Animation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        let particles = [];
+        const numParticles = 100;
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            for (let i = 0; i < numParticles; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function draw() {
+            background(0);
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].display();
+                for (let j = i + 1; j < particles.length; j++) {
+                    let distance = dist(particles[i].x, particles[i].y, particles[j].x, particles[j].y);
+                    if (distance < 100) {
+                        stroke(255, 255, 255, 255 - distance * 2.5);
+                        line(particles[i].x, particles[i].y, particles[j].x, particles[j].y);
+                    }
+                }
+            }
+        }
+
+        class Particle {
+            constructor() {
+                this.x = random(width);
+                this.y = random(height);
+                this.vx = random(-1, 1);
+                this.vy = random(-1, 1);
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0 || this.x > width) {
+                    this.vx *= -1;
+                }
+
+                if (this.y < 0 || this.y > height) {
+                    this.vy *= -1;
+                }
+            }
+
+            display() {
+                noStroke();
+                fill(255);
+                ellipse(this.x, this.y, 5, 5);
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+    </script>
+</body>
+</html>
